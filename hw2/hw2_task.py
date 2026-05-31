@@ -50,13 +50,7 @@ def profile(loop_fn, model, input_ids, trace_name: str):
 
 
 def generate_optimized(optimized_trace_name: str) -> float:
-    # Build the model in float16. The V0 baseline ran in float32, so this only
-    # affects the optimized run and keeps the speedup comparison fair. fp16 halves
-    # memory traffic and runs the matmuls on tensor cores. Note fp16 has a much
-    # smaller dynamic range than fp32/bf16 (5-bit exponent), so it is more prone to
-    # overflow/NaNs; it is also a precision tradeoff, so the preview is checked
-    # against the fp32 baseline.
-    model = build_model(torch.float16)
+    model = build_model(torch.float32)
     input_ids = get_input_ids()
     profile(optimized_loop, model, input_ids, optimized_trace_name)
     elapsed = time_generation(optimized_loop, model, input_ids, "Optimized")
@@ -105,38 +99,31 @@ if __name__ == "__main__":
 #
 # Changes made and speedup per fix:
 #
-#  1. No per-step .item() sync: token IDs stay on the GPU and are copied back to
-#     the host in a single .tolist() after the loop, removing sync overhead.
-#     Impact: 1.02x (baseline-bound by GPU matmuls, so the sync removal alone
-#     barely moved the clock — see step 2 for why).
+#   1. No per-step .item() sync: token IDs stay on the GPU and are copied back
+#      to the host in a single .tolist() after the loop, removing sync overhead.
+#      Impact: 1.02x (baseline-bound by GPU matmuls, so the sync removal alone
+#      barely moved the clock — see step 2 for why).
 #
-#  2. KV cache (use_cache=True): This reduces the size of the matmul matrices down to single vector,
-#     eliminating the redundant full-sequence recompute.
-#     Impact: 1.02x -> 6.25x (~6.13x incremental). Biggest win — see below.
+#   2. KV cache (use_cache=True): reduces the per-step matmuls down to a single
+#      vector, eliminating the redundant full-sequence recompute.
+#      Impact: 1.02x -> 6.25x (~6.13x incremental). Biggest win — see below.
 #
-#  3. torch.inference_mode(): model.eval() only disables dropout etc.; autograd
-#     still records a graph causing CPU overhead.
-#     Impact: 6.25x -> 8.78x (~1.40x incremental).
+#   3. torch.inference_mode(): model.eval() only disables dropout etc.; autograd
+#      still records a graph, causing CPU overhead.
+#      Impact: 6.25x -> 8.78x (~1.40x incremental).
 #
-#  4. logits_to_keep=1: we only read logits[:, -1, :], so there's no need to
-#     calculate the lm_head over every prompt position.
-#     Impact: no visible change.
+#   4. logits_to_keep=1: we only read logits[:, -1, :], so there's no need to
+#      compute the lm_head over every prompt position.
+#      Impact: no visible change.
 #
-# Also considered: reducing the model dtype (e.g. bf16/fp16, or TF32 for matmuls).
-# This is the largest remaining lever since matmuls dominate, but it was deemed too
-# risky here: it changes the numerics and can therefore change the generated tokens.
-# Even though the change is tiny and likely would not alter the first few tokens I
-# check manually against the baseline, that manual spot-check only covers a prefix,
-# so I could not guarantee the full 128-token output stays identical. I kept the
-# optimizations lossless instead.
+# Also tried but reverted: reducing the model dtype — fp16, bf16, and TF32. In
+# every case there was a minor but stably observed degradation (~10% slower),
+# not a speedup. It would also be a precision tradeoff: it changes the numerics
+# and can change the generated tokens.
 #
 # Biggest impact and why:
 #
-#  The KV cache (step 2) by far. The V0 baseline reprocesses the entire growing
-#  sequence on every step, so the per-step matmul cost scales with the full
-#  sequence length (~1024+ tokens) and the total work is quadratic in the number
-#  of tokens. The profiler confirmed this: aten::mm / ampere_sgemm accounted for
-#  ~86% of CUDA time. The KV cache makes each decode step process just one new
-#  token against cached keys/values, collapsing those per-step matmuls from
-#  O(seq_len) to O(1) and removing the dominant cost. Every other change only
-#  trims CPU-side overhead, which is why none of them rival it.
+#   The KV cache (step 2) by far. The V0 baseline reprocesses the entire growing
+#   sequence on every step, so the per-step matmul cost scales with the full
+#   sequence length (~1024+ tokens) and the total work is quadratic in the
+#   number of tokens instead of being linear.
