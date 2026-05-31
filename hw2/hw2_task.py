@@ -13,17 +13,17 @@ from utils import (
 
 
 def optimized_loop(model, input_ids, n_steps):
-    # TODO: fix the performance issues you found — changes may include
-    # both `optimized_loop` and `generate_optimized`
+    # Keep token IDs on the GPU for the whole loop. Calling .item() every step
+    # forces a GPU->CPU copy that blocks the CPU until the GPU finishes, killing
+    # CPU/GPU overlap. Instead we accumulate on-device and do a single device->host
+    # transfer (.tolist()) once the loop is done.
+    prompt_len = input_ids.shape[1]
     generated_ids = input_ids.clone()
-    generated_tokens = []
     for _ in range(n_steps):
         outputs = model(input_ids=generated_ids)
         next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
-        token_value = next_token_id.item()
-        generated_tokens.append(token_value)
         generated_ids = torch.cat([generated_ids, next_token_id.unsqueeze(0)], dim=1)
-    return generated_tokens
+    return generated_ids[0, prompt_len:].tolist()
 
 
 def profile(loop_fn, model, input_ids, trace_name: str):
