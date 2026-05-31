@@ -13,17 +13,33 @@ from utils import (
 
 
 def optimized_loop(model, input_ids, n_steps):
-    # Keep token IDs on the GPU for the whole loop. Calling .item() every step
-    # forces a GPU->CPU copy that blocks the CPU until the GPU finishes, killing
-    # CPU/GPU overlap. Instead we accumulate on-device and do a single device->host
-    # transfer (.tolist()) once the loop is done.
-    prompt_len = input_ids.shape[1]
-    generated_ids = input_ids.clone()
-    for _ in range(n_steps):
-        outputs = model(input_ids=generated_ids)
+    # Two optimizations stacked here:
+    #  1. KV cache (use_cache=True): the prompt is encoded once during prefill,
+    #     then each decode step feeds only the *single* new token plus the cached
+    #     keys/values. This turns each step's matmuls from O(seq_len) down to O(1),
+    #     eliminating the redundant full-sequence recompute that dominated the GPU.
+    #  2. No per-step .item() sync: token IDs stay on the GPU and are copied back to
+    #     the host in a single .tolist() after the loop, preserving CPU/GPU overlap.
+    generated_tokens = []
+
+    # Prefill: process the whole prompt once and prime the KV cache.
+    outputs = model(input_ids=input_ids, use_cache=True)
+    past_key_values = outputs.past_key_values
+    next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
+    generated_tokens.append(next_token_id)
+
+    # Decode: feed only the newest token; positions are inferred from the cache.
+    for _ in range(n_steps - 1):
+        outputs = model(
+            input_ids=next_token_id.unsqueeze(0),
+            past_key_values=past_key_values,
+            use_cache=True,
+        )
+        past_key_values = outputs.past_key_values
         next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
-        generated_ids = torch.cat([generated_ids, next_token_id.unsqueeze(0)], dim=1)
-    return generated_ids[0, prompt_len:].tolist()
+        generated_tokens.append(next_token_id)
+
+    return torch.cat(generated_tokens).tolist()
 
 
 def profile(loop_fn, model, input_ids, trace_name: str):
