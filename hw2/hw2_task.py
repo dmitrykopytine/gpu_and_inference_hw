@@ -14,21 +14,7 @@ from utils import (
 
 @torch.inference_mode()
 def optimized_loop(model, input_ids, n_steps):
-    # Three optimizations stacked here:
-    #  1. KV cache (use_cache=True): the prompt is encoded once during prefill,
-    #     then each decode step feeds only the *single* new token plus the cached
-    #     keys/values. This turns each step's matmuls from O(seq_len) down to O(1),
-    #     eliminating the redundant full-sequence recompute that dominated the GPU.
-    #  2. No per-step .item() sync: token IDs stay on the GPU and are copied back to
-    #     the host in a single .tolist() after the loop, preserving CPU/GPU overlap.
-    #  3. torch.inference_mode(): model.eval() only disables dropout etc.; autograd
-    #     still records a graph and bumps tensor version counters on every op. With
-    #     hundreds of tiny ops per decode step that bookkeeping is pure CPU overhead.
-    #     inference_mode disables it entirely — bit-identical output, lower CPU cost.
-    #  4. logits_to_keep=1: we only ever read logits[:, -1, :], so there's no need to
-    #     run the lm_head over every prompt position. During prefill that turns a
-    #     [1024, 2048] x [2048, vocab] projection into [1, 2048] x [2048, vocab].
-    #     Lossless — the discarded positions were never used.
+    # See the Writeup at the bottom of this file for the optimizations applied here.
     generated_tokens = []
 
     # Prefill: process the whole prompt once and prime the KV cache.
@@ -113,6 +99,38 @@ if __name__ == "__main__":
 #
 # Changes made and speedup per fix:
 #
+#  1. No per-step .item() sync: token IDs stay on the GPU and are copied back to
+#     the host in a single .tolist() after the loop, removing sync overhead.
+#     Impact: 1.02x (baseline-bound by GPU matmuls, so the sync removal alone
+#     barely moved the clock — see step 2 for why).
+#
+#  2. KV cache (use_cache=True): This reduces the size of the matmul matrices down to single vector,
+#     eliminating the redundant full-sequence recompute.
+#     Impact: 1.02x -> 6.25x (~6.13x incremental). Biggest win — see below.
+#
+#  3. torch.inference_mode(): model.eval() only disables dropout etc.; autograd
+#     still records a graph causing CPU overhead.
+#     Impact: 6.25x -> 8.78x (~1.40x incremental).
+#
+#  4. logits_to_keep=1: we only read logits[:, -1, :], so there's no need to
+#     calculate the lm_head over every prompt position.
+#     Impact: no visible change.
+#
+# Also considered: reducing the model dtype (e.g. bf16/fp16, or TF32 for matmuls).
+# This is the largest remaining lever since matmuls dominate, but it was deemed too
+# risky here: it changes the numerics and can therefore change the generated tokens.
+# Even though the change is tiny and likely would not alter the first few tokens I
+# check manually against the baseline, that manual spot-check only covers a prefix,
+# so I could not guarantee the full 128-token output stays identical. I kept the
+# optimizations lossless instead.
 #
 # Biggest impact and why:
 #
+#  The KV cache (step 2) by far. The V0 baseline reprocesses the entire growing
+#  sequence on every step, so the per-step matmul cost scales with the full
+#  sequence length (~1024+ tokens) and the total work is quadratic in the number
+#  of tokens. The profiler confirmed this: aten::mm / ampere_sgemm accounted for
+#  ~86% of CUDA time. The KV cache makes each decode step process just one new
+#  token against cached keys/values, collapsing those per-step matmuls from
+#  O(seq_len) to O(1) and removing the dominant cost. Every other change only
+#  trims CPU-side overhead, which is why none of them rival it.
