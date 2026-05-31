@@ -1,0 +1,222 @@
+[
+  {
+    "name": "lowest-AI (~0 FLOPs)",
+    "series": "baseline",
+    "variant": "baseline",
+    "num_ops": 0,
+    "arithmetic_intensity": 0.01,
+    "achieved_flops": 6467701060.4806,
+    "achieved_bw": 646770106048.06,
+    "ms": 0.830079972743988
+  },
+  {
+    "name": "1 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 1,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 64778900018.780876,
+    "achieved_bw": 777346800225.3706,
+    "ms": 2.0719358921051025
+  },
+  {
+    "name": "1 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 1,
+    "arithmetic_intensity": 0.25,
+    "achieved_flops": 166645635308.2484,
+    "achieved_bw": 666582541232.9937,
+    "ms": 0.8054080009460449
+  },
+  {
+    "name": "2 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 2,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 57325863413.55173,
+    "achieved_bw": 687910360962.6207,
+    "ms": 4.682623863220215
+  },
+  {
+    "name": "2 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 2,
+    "arithmetic_intensity": 0.5,
+    "achieved_flops": 340709468545.8769,
+    "achieved_bw": 681418937091.7538,
+    "ms": 0.7878720164299011
+  },
+  {
+    "name": "4 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 4,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 54596450626.340195,
+    "achieved_bw": 655157407516.0824,
+    "ms": 9.833439826965332
+  },
+  {
+    "name": "4 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 4,
+    "arithmetic_intensity": 1.0,
+    "achieved_flops": 681114663290.2058,
+    "achieved_bw": 681114663290.2058,
+    "ms": 0.7882239818572998
+  },
+  {
+    "name": "8 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 8,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 53301104294.5679,
+    "achieved_bw": 639613251534.8148,
+    "ms": 20.144832611083984
+  },
+  {
+    "name": "8 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 8,
+    "arithmetic_intensity": 2.0,
+    "achieved_flops": 1362063397188.1494,
+    "achieved_bw": 681031698594.0747,
+    "ms": 0.788320004940033
+  },
+  {
+    "name": "16 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 16,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 52712955011.18747,
+    "achieved_bw": 632555460134.2496,
+    "ms": 40.739200592041016
+  },
+  {
+    "name": "16 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 16,
+    "arithmetic_intensity": 4.0,
+    "achieved_flops": 2721585843818.66,
+    "achieved_bw": 680396460954.665,
+    "ms": 0.7890560030937195
+  },
+  {
+    "name": "32 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 32,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 52403681376.03188,
+    "achieved_bw": 628844176512.3827,
+    "ms": 81.95926666259766
+  },
+  {
+    "name": "32 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 32,
+    "arithmetic_intensity": 8.0,
+    "achieved_flops": 5450909017306.415,
+    "achieved_bw": 681363627163.3019,
+    "ms": 0.7879359722137451
+  },
+  {
+    "name": "64 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 64,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 52264430412.48026,
+    "achieved_bw": 627173164949.7632,
+    "ms": 164.3552703857422
+  },
+  {
+    "name": "64 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 64,
+    "arithmetic_intensity": 16.0,
+    "achieved_flops": 10899161546959.383,
+    "achieved_bw": 681197596684.9614,
+    "ms": 0.7881280183792114
+  },
+  {
+    "name": "128 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 128,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 52186261391.62003,
+    "achieved_bw": 626235136699.4404,
+    "ms": 329.2029113769531
+  },
+  {
+    "name": "128 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 128,
+    "arithmetic_intensity": 32.0,
+    "achieved_flops": 21839112270129.055,
+    "achieved_bw": 682472258441.533,
+    "ms": 0.7866560220718384
+  },
+  {
+    "name": "256 ops",
+    "series": "elementwise",
+    "variant": "eager",
+    "num_ops": 256,
+    "arithmetic_intensity": 0.08333333333333333,
+    "achieved_flops": 52150670234.71759,
+    "achieved_bw": 625808042816.6111,
+    "ms": 658.8551635742188
+  },
+  {
+    "name": "256 ops",
+    "series": "elementwise",
+    "variant": "compiled",
+    "num_ops": 256,
+    "arithmetic_intensity": 64.0,
+    "achieved_flops": 42664673709845.92,
+    "achieved_bw": 666635526716.3425,
+    "ms": 0.8053439855575562
+  },
+  {
+    "name": "n=1024",
+    "series": "matmul",
+    "variant": "library",
+    "num_ops": -1,
+    "arithmetic_intensity": 170.66666666666666,
+    "achieved_flops": 26789965859100.164,
+    "achieved_bw": 156972456205.66504,
+    "ms": 0.0801599994301796
+  },
+  {
+    "name": "n=2048",
+    "series": "matmul",
+    "variant": "library",
+    "num_ops": -1,
+    "arithmetic_intensity": 341.3333333333333,
+    "achieved_flops": 45532262361363.86,
+    "achieved_bw": 133395299886.80818,
+    "ms": 0.3773120045661926
+  },
+  {
+    "name": "n=4096",
+    "series": "matmul",
+    "variant": "library",
+    "num_ops": -1,
+    "arithmetic_intensity": 682.6666666666666,
+    "achieved_flops": 37088245944522.984,
+    "achieved_bw": 54328485270.29733,
+    "ms": 3.705728054046631
+  }
+]
