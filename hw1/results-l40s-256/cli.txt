@@ -1,0 +1,39 @@
+(.venv) dm9@computeinstance-e00v8zjfcamb1w18y9:~/gpu_and_inference_hw$ python3 hw1/hw1_task.py
+======================================================================
+HW1: GPU Roofline Model — NVIDIA L40S 48GB GDDR6
+======================================================================
+
+Theoretical specs (FP32):
+  Peak compute:    92 TFLOP/s
+  Peak bandwidth:  0.86 TB/s
+  Ridge point:     106.0 FLOP/Byte
+
+Running benchmarks (first run compiles kernels via torch.compile)...
+  lowest-AI:  0.830 ms | BW: 0.65 TB/s
+    1 ops (   eager): 2.072 ms | AI: 0.0833 FLOP/B | 0.06 TFLOP/s
+    1 ops (compiled): 0.805 ms | AI: 0.25 FLOP/B | 0.17 TFLOP/s
+    2 ops (   eager): 4.683 ms | AI: 0.0833 FLOP/B | 0.06 TFLOP/s
+    2 ops (compiled): 0.788 ms | AI: 0.5 FLOP/B | 0.34 TFLOP/s
+    4 ops (   eager): 9.833 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+    4 ops (compiled): 0.788 ms | AI: 1 FLOP/B | 0.68 TFLOP/s
+    8 ops (   eager): 20.145 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+    8 ops (compiled): 0.788 ms | AI: 2 FLOP/B | 1.36 TFLOP/s
+   16 ops (   eager): 40.739 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+   16 ops (compiled): 0.789 ms | AI: 4 FLOP/B | 2.72 TFLOP/s
+   32 ops (   eager): 81.959 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+   32 ops (compiled): 0.788 ms | AI: 8 FLOP/B | 5.45 TFLOP/s
+   64 ops (   eager): 164.355 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+   64 ops (compiled): 0.788 ms | AI: 16 FLOP/B | 10.90 TFLOP/s
+  128 ops (   eager): 329.203 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+  128 ops (compiled): 0.787 ms | AI: 32 FLOP/B | 21.84 TFLOP/s
+  256 ops (   eager): 658.855 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+  256 ops (compiled): 0.805 ms | AI: 64 FLOP/B | 42.66 TFLOP/s
+  matmul 1024×1024: 0.080 ms | AI: 170.7 FLOP/B | 26.79 TFLOP/s
+  matmul 2048×2048: 0.377 ms | AI: 341.3 FLOP/B | 45.53 TFLOP/s
+  matmul 4096×4096: 3.706 ms | AI: 682.7 FLOP/B | 37.09 TFLOP/s
+
+Generating plots...
+
+Roofline plot saved to /home/dm9/gpu_and_inference_hw/hw1/results/roofline.png
+
+Done! Check the results/ directory for plots.
