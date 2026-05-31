@@ -25,10 +25,14 @@ def optimized_loop(model, input_ids, n_steps):
     #     still records a graph and bumps tensor version counters on every op. With
     #     hundreds of tiny ops per decode step that bookkeeping is pure CPU overhead.
     #     inference_mode disables it entirely — bit-identical output, lower CPU cost.
+    #  4. logits_to_keep=1: we only ever read logits[:, -1, :], so there's no need to
+    #     run the lm_head over every prompt position. During prefill that turns a
+    #     [1024, 2048] x [2048, vocab] projection into [1, 2048] x [2048, vocab].
+    #     Lossless — the discarded positions were never used.
     generated_tokens = []
 
     # Prefill: process the whole prompt once and prime the KV cache.
-    outputs = model(input_ids=input_ids, use_cache=True)
+    outputs = model(input_ids=input_ids, use_cache=True, logits_to_keep=1)
     past_key_values = outputs.past_key_values
     next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
     generated_tokens.append(next_token_id)
@@ -39,6 +43,7 @@ def optimized_loop(model, input_ids, n_steps):
             input_ids=next_token_id.unsqueeze(0),
             past_key_values=past_key_values,
             use_cache=True,
+            logits_to_keep=1,
         )
         past_key_values = outputs.past_key_values
         next_token_id = torch.argmax(outputs.logits[:, -1, :], dim=-1)
