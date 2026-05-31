@@ -12,8 +12,9 @@ import torch
 
 def lowest_ai_fn(x: torch.Tensor) -> torch.Tensor:
     """Lowest arithmetic intensity baseline (0 FLOP/Byte)."""
-    # TODO (1 line): implement a lowest-AI op
-    pass
+    # A clone is a pure memcpy: read each element once, write each element
+    # once, perform 0 FLOPs. This pins us to the memory-bandwidth ceiling.
+    return x.clone()
 
 
 # TASK 1b: Implement a function with configurable arithmetic intensity.
@@ -37,10 +38,12 @@ def make_compute_fn(num_ops: int, compiled: bool = True):
     """Return an eager or compiled function whose work scales with num_ops."""
 
     def fn(x: torch.Tensor) -> torch.Tensor:
-        pass
+        acc = x
+        for _ in range(num_ops):
+            acc = acc * x + x
+        return acc
 
-    # TODO (1 line): return either `fn` or `torch.compile(fn)` based on `compiled`
-    pass
+    return torch.compile(fn) if compiled else fn
 
 
 # ============================================================================
@@ -62,8 +65,20 @@ def benchmark_fn(fn, *args, warmup=25, rep=100) -> float:
         fn(*args)
     torch.cuda.synchronize()
 
-    # TODO: time `rep` runs using CUDA events and return median latency (ms)
-    pass
+    # Pre-allocate paired events so we record many reps with a single sync at
+    # the end; reading elapsed_time before sync would block per-iteration.
+    start_events = [torch.cuda.Event(enable_timing=True) for _ in range(rep)]
+    end_events = [torch.cuda.Event(enable_timing=True) for _ in range(rep)]
+
+    for i in range(rep):
+        start_events[i].record()
+        fn(*args)
+        end_events[i].record()
+
+    torch.cuda.synchronize()
+
+    times_ms = [s.elapsed_time(e) for s, e in zip(start_events, end_events)]
+    return float(torch.tensor(times_ms).median().item())
 
 
 # TASK 3: Compute element-wise operation metrics from measured runtime.
@@ -83,8 +98,22 @@ def benchmark_fn(fn, *args, warmup=25, rep=100) -> float:
 
 
 def compute_elementwise_metrics(num_elements, num_ops, bytes_per_element, ms, variant):
-    # TODO: compute total FLOPs, arithmetic intensity, and achieved FLOP/s
-    pass
+    # Each `acc = acc * x + x` iteration is 1 multiply + 1 add per element.
+    total_flops = 2 * num_ops * num_elements
+
+    if variant == "compiled":
+        # Inductor fuses the whole chain into a single kernel: read x once,
+        # write the final acc once. Intermediates stay in registers.
+        total_bytes = 2 * num_elements * bytes_per_element
+    else:
+        # Eager mode launches two kernels per iteration:
+        #   tmp = acc * x   ->  read acc, read x, write tmp     = 3N elements
+        #   acc = tmp + x   ->  read tmp, read x, write new acc = 3N elements
+        # so each iteration moves ~6N elements through global memory.
+        total_bytes = num_ops * 6 * num_elements * bytes_per_element
+
+    ai = total_flops / total_bytes
+    achieved_flops = total_flops / (ms * 1e-3)
     return total_flops, ai, achieved_flops
 
 
