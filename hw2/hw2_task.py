@@ -50,7 +50,13 @@ def profile(loop_fn, model, input_ids, trace_name: str):
 
 
 def generate_optimized(optimized_trace_name: str) -> float:
-    model = build_model(torch.float32)
+    # Build the model in float16. The V0 baseline ran in float32, so this only
+    # affects the optimized run and keeps the speedup comparison fair. fp16 halves
+    # memory traffic and runs the matmuls on tensor cores. Note fp16 has a much
+    # smaller dynamic range than fp32/bf16 (5-bit exponent), so it is more prone to
+    # overflow/NaNs; it is also a precision tradeoff, so the preview is checked
+    # against the fp32 baseline.
+    model = build_model(torch.float16)
     input_ids = get_input_ids()
     profile(optimized_loop, model, input_ids, optimized_trace_name)
     elapsed = time_generation(optimized_loop, model, input_ids, "Optimized")
