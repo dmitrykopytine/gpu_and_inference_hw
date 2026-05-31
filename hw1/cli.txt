@@ -1,0 +1,37 @@
+(.venv) dm9@computeinstance-e00v8zjfcamb1w18y9:~/gpu_and_inference_hw$ python3 hw1/hw1_task.py
+======================================================================
+HW1: GPU Roofline Model — NVIDIA L40S 48GB GDDR6
+======================================================================
+
+Theoretical specs (FP32):
+  Peak compute:    92 TFLOP/s
+  Peak bandwidth:  0.86 TB/s
+  Ridge point:     106.0 FLOP/Byte
+
+Running benchmarks (first run compiles kernels via torch.compile)...
+  lowest-AI:  0.831 ms | BW: 0.65 TB/s
+    1 ops (   eager): 2.081 ms | AI: 0.0833 FLOP/B | 0.06 TFLOP/s
+    1 ops (compiled): 0.807 ms | AI: 0.25 FLOP/B | 0.17 TFLOP/s
+    2 ops (   eager): 4.679 ms | AI: 0.0833 FLOP/B | 0.06 TFLOP/s
+    2 ops (compiled): 0.807 ms | AI: 0.5 FLOP/B | 0.33 TFLOP/s
+    4 ops (   eager): 9.830 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+    4 ops (compiled): 0.807 ms | AI: 1 FLOP/B | 0.67 TFLOP/s
+    8 ops (   eager): 20.137 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+    8 ops (compiled): 0.807 ms | AI: 2 FLOP/B | 1.33 TFLOP/s
+   16 ops (   eager): 40.736 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+   16 ops (compiled): 0.807 ms | AI: 4 FLOP/B | 2.66 TFLOP/s
+   32 ops (   eager): 81.982 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+   32 ops (compiled): 0.807 ms | AI: 8 FLOP/B | 5.32 TFLOP/s
+   64 ops (   eager): 164.404 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+   64 ops (compiled): 0.808 ms | AI: 16 FLOP/B | 10.63 TFLOP/s
+  128 ops (   eager): 329.121 ms | AI: 0.0833 FLOP/B | 0.05 TFLOP/s
+  128 ops (compiled): 0.809 ms | AI: 32 FLOP/B | 21.24 TFLOP/s
+  matmul 1024×1024: 0.080 ms | AI: 170.7 FLOP/B | 27.01 TFLOP/s
+  matmul 2048×2048: 0.391 ms | AI: 341.3 FLOP/B | 43.94 TFLOP/s
+  matmul 4096×4096: 3.633 ms | AI: 682.7 FLOP/B | 37.83 TFLOP/s
+
+Generating plots...
+
+Roofline plot saved to /home/dm9/gpu_and_inference_hw/hw1/results/roofline.png
+
+Done! Check the results/ directory for plots.
