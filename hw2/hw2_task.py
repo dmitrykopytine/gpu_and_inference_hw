@@ -12,14 +12,19 @@ from utils import (
 )
 
 
+@torch.inference_mode()
 def optimized_loop(model, input_ids, n_steps):
-    # Two optimizations stacked here:
+    # Three optimizations stacked here:
     #  1. KV cache (use_cache=True): the prompt is encoded once during prefill,
     #     then each decode step feeds only the *single* new token plus the cached
     #     keys/values. This turns each step's matmuls from O(seq_len) down to O(1),
     #     eliminating the redundant full-sequence recompute that dominated the GPU.
     #  2. No per-step .item() sync: token IDs stay on the GPU and are copied back to
     #     the host in a single .tolist() after the loop, preserving CPU/GPU overlap.
+    #  3. torch.inference_mode(): model.eval() only disables dropout etc.; autograd
+    #     still records a graph and bumps tensor version counters on every op. With
+    #     hundreds of tiny ops per decode step that bookkeeping is pure CPU overhead.
+    #     inference_mode disables it entirely — bit-identical output, lower CPU cost.
     generated_tokens = []
 
     # Prefill: process the whole prompt once and prime the KV cache.
