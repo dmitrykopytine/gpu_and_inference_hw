@@ -50,15 +50,14 @@ def profile(loop_fn, model, input_ids, trace_name: str):
 
 
 def generate_optimized(optimized_trace_name: str) -> float:
-    # Enable TF32 for FP32 matmuls: keeps the float32 API/storage but runs the
-    # dominant GEMMs on tensor cores with reduced-mantissa accumulation. Set here
-    # (not globally) so it only affects the optimized run and the V0 baseline above
-    # stays full-precision FP32, keeping the speedup comparison fair.
-    torch.backends.cuda.matmul.allow_tf32 = True
-    torch.backends.cudnn.allow_tf32 = True
-    torch.set_float32_matmul_precision("high")
-
-    model = build_model(torch.float32)
+    # Build the model in bfloat16. The V0 baseline ran in float32, so this only
+    # affects the optimized run and keeps the speedup comparison fair. bf16 halves
+    # memory traffic and runs the matmuls natively on tensor cores; it has the same
+    # 8-bit exponent as fp32 (just fewer mantissa bits), so no loss-scaling is needed
+    # and it is more numerically robust than fp16. This is a precision tradeoff: the
+    # generated tokens can differ from the fp32 baseline, so the preview is checked
+    # against it.
+    model = build_model(torch.bfloat16)
     input_ids = get_input_ids()
     profile(optimized_loop, model, input_ids, optimized_trace_name)
     elapsed = time_generation(optimized_loop, model, input_ids, "Optimized")
