@@ -1,4 +1,13 @@
 import torch
+import torch._dynamo
+
+# Each call to `torch.compile(fn)` here reuses the same inner code object but
+# specializes on `num_ops`, so every new value in `ops_list` counts as one
+# recompile of that code object. The default cap is 8, which we exceed once
+# `ops_list` has more than 8 entries (e.g. adding `256`). Raising the limit
+# keeps every `num_ops` as a real compiled kernel instead of silently falling
+# back to eager.
+torch._dynamo.config.cache_size_limit = 64
 
 
 # ============================================================================

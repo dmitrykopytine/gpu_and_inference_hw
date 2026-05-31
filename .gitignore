@@ -1,5 +1,7 @@
 .venv/
 __pycache__/
+.DS_Store
+**/.DS_Store
 *.py[cod]
 #hw1/results/
 #hw2/results/
