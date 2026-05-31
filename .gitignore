@@ -1,5 +1,5 @@
 .venv/
 __pycache__/
 *.py[cod]
-hw1/results/
-hw2/results/
+#hw1/results/
+#hw2/results/
