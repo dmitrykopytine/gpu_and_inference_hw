@@ -1,14 +1,6 @@
 import torch
 import torch._dynamo
 
-# Each call to `torch.compile(fn)` here reuses the same inner code object but
-# specializes on `num_ops`, so every new value in `ops_list` counts as one
-# recompile of that code object. The default cap is 8, which we exceed once
-# `ops_list` has more than 8 entries (e.g. adding `256`). Raising the limit
-# keeps every `num_ops` as a real compiled kernel instead of silently falling
-# back to eager.
-#torch._dynamo.config.cache_size_limit = 64
-
 
 # ============================================================================
 # Part 1: Implement PyTorch Functions
@@ -135,12 +127,51 @@ def compute_elementwise_metrics(num_elements, num_ops, bytes_per_element, ms, va
 # Why does performance rise as arithmetic intensity increases even though the
 # measured runtime changes only a little?
 #
+# These points are still in the memory-bound region, so runtime is limited by the
+# HBM traffic. The amount of data is the same in every case (only the number of
+# ops changes), so the runtime stays roughly constant. For that same data and
+# runtime, more ops means more FLOPs performed, so performance (FLOP/s) rises with
+# the number of ops, i.e. with arithmetic intensity.
+#
 # Q2. In one sample run, `matmul 1024x1024` achieved lower FLOP/s than the
 # `128 ops` compiled element-wise operation. Give one or two reasons why that can
 # happen on a large GPU like an H100.
+#
+# The element-wise multiply-add is the most efficient pattern: load once, do all
+# the work in registers, store once. Its inner loop is essentially nothing but
+# floating-point FMAs.
+# Matmul, by contrast, spends a relatively larger share of its instructions on
+# data loads and integer work (e.g. address/index calculation). Those instructions
+# take execution time but do not count as FLOPs, so the achieved FLOP/s is lower.
 #
 # Q3. Between `64 ops` and `128 ops`, runtime increases more noticeably than it
 # did for smaller operations. What does that suggest about what resource is
 # becoming the bottleneck?
 #
+# It suggests that compute is becoming the bottleneck.
+# In every case we process the same amount of data, so the memory-transfer time is
+# the same, and for the smaller ops that transfer time roughly equals the whole
+# runtime. Once we enter the compute-bound region (which happens at 128 ops), the
+# GPU can no longer finish all the FLOPs within the time it takes to stream the
+# data. The extra runtime therefore reflects the additional compute time needed to
+# process the larger number of ops.
+#
 # Q4. Why do the eager `ops-K` points look so different from the compiled ones?
+#
+# Eager mode launches separate kernels for each operation, so every op moves its
+# own data through HBM. The total bytes therefore grow linearly with the number of
+# operations:
+#   [eager]: total_bytes = num_ops * num_elements * const
+# In compiled mode the chain is fused into one kernel, so num_ops drops out and the
+# data is read/written only once:
+#   [compiled]: total_bytes = num_elements * const
+#
+# This is why the two series look so different on the roofline:
+#   - Compiled: total_flops grows with num_ops but total_bytes is constant, so
+#     AI = total_flops / total_bytes rises with num_ops and the points climb
+#     up-and-right.
+#   - Eager: both total_flops and total_bytes scale as num_ops * num_elements *
+#     const, so their ratio (AI) is constant and the points stay pinned at the same
+#     low AI in the far-left, memory-bound corner. Runtime still grows with num_ops
+#     because the HBM bytes grow, but FLOP/s stays the same since it is capped by 
+#     the memory bandwidth.
