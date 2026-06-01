@@ -100,12 +100,14 @@ if __name__ == "__main__":
 # Changes made and speedup per fix:
 #
 #   1. No per-step .item() sync: token IDs stay on the GPU and are copied back
-#      to the host in a single .tolist() after the loop, removing sync overhead.
+#      to the host in a single .tolist() after the loop, merging 128 per-step
+#      GPU -> CPU syncs into one at the end.
 #      Impact: 1.02x (baseline-bound by GPU matmuls, so the sync removal alone
-#      barely moved the clock — see step 2 for why).
+#      barely moved the clock).
 #
-#   2. KV cache (use_cache=True): reduces the per-step matmuls down to a single
-#      vector, eliminating the redundant full-sequence recompute.
+#   2. KV cache (use_cache=True): each decode step processes only the one new
+#      token against the cached keys/values, instead of recomputing projections
+#      for the whole sequence.
 #      Impact: 1.02x -> 6.25x (~6.13x incremental). Biggest win — see below.
 #
 #   3. torch.inference_mode(): model.eval() only disables dropout etc.; autograd
@@ -114,16 +116,25 @@ if __name__ == "__main__":
 #
 #   4. logits_to_keep=1: we only read logits[:, -1, :], so there's no need to
 #      compute the lm_head over every prompt position.
-#      Impact: no visible change.
+#      Impact: 8.78x -> 8.79x (no visible change).
 #
 # Also tried but reverted: reducing the model dtype — fp16, bf16, and TF32. In
 # every case there was a minor but stably observed degradation (~10% slower),
-# not a speedup. It would also be a precision tradeoff: it changes the numerics
-# and can change the generated tokens.
+# not a speedup. Probably because after the KV cache the generation becomes more
+# overhead-bound (CPU launch latency over the per-step decode) rather than
+# matmul-bound, so lower precision speeds up arithmetic that is no longer the
+# bottleneck. It is also a precision tradeoff: it changes the numerics and can
+# change the generated tokens — for some of the tested dtypes the output did
+# in fact change versus the fp32 baseline already in the first few tokens.
+#
+# Final result: 8.79x speedup vs the V0 slow baseline.
 #
 # Biggest impact and why:
 #
 #   The KV cache (step 2) by far. The V0 baseline reprocesses the entire growing
 #   sequence on every step, so the per-step matmul cost scales with the full
 #   sequence length (~1024+ tokens) and the total work is quadratic in the
-#   number of tokens instead of being linear.
+#   number of tokens instead of being linear. The profiler confirms it: over the
+#   12-step profile, aten::mm self-CUDA time drops from ~104.69ms (V0 baseline)
+#   to ~15.88ms with the KV cache — the matmuls were the dominant cost, and the
+#   cache removes the redundant recompute of them.
