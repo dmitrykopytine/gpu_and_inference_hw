@@ -92,7 +92,7 @@ def measure_roofline_points(
     # Benchmark compute functions with varying arithmetic intensity.
     # We compare eager and compiled versions to show how fusion changes the
     # measured roofline position.
-    ops_list = [1, 2, 4, 8, 16, 32, 64, 128, 256]
+    ops_list = [1, 2, 4, 8, 16, 32, 64, 128]
     for num_ops in ops_list:
         eager_fn = make_compute_fn(num_ops, compiled=False)
         compiled_fn = make_compute_fn(num_ops, compiled=True)

@@ -7,7 +7,7 @@ import torch._dynamo
 # `ops_list` has more than 8 entries (e.g. adding `256`). Raising the limit
 # keeps every `num_ops` as a real compiled kernel instead of silently falling
 # back to eager.
-torch._dynamo.config.cache_size_limit = 64
+#torch._dynamo.config.cache_size_limit = 64
 
 
 # ============================================================================
