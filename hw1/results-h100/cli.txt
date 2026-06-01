@@ -1,0 +1,38 @@
+(.venv) dm9@computeinstance-e00xn7jce61phskygq:~/gpu_and_inference_hw$ python3 hw1/hw1_task.py
+======================================================================
+HW1: GPU Roofline Model — NVIDIA H100 80GB HBM3
+======================================================================
+
+Theoretical specs (FP32):
+  Peak compute:    67 TFLOP/s
+  Peak bandwidth:  3.35 TB/s
+  Ridge point:     20.0 FLOP/Byte
+
+Running benchmarks (first run compiles kernels via torch.compile)...
+  lowest-AI:  0.180 ms | BW: 2.98 TB/s
+    1 ops (   eager): 0.443 ms | AI: 0.0833 FLOP/B | 0.30 TFLOP/s
+    1 ops (compiled): 0.181 ms | AI: 0.25 FLOP/B | 0.74 TFLOP/s
+    2 ops (   eager): 0.970 ms | AI: 0.0833 FLOP/B | 0.28 TFLOP/s
+    2 ops (compiled): 0.181 ms | AI: 0.5 FLOP/B | 1.48 TFLOP/s
+    4 ops (   eager): 2.020 ms | AI: 0.0833 FLOP/B | 0.27 TFLOP/s
+    4 ops (compiled): 0.181 ms | AI: 1 FLOP/B | 2.97 TFLOP/s
+    8 ops (   eager): 4.122 ms | AI: 0.0833 FLOP/B | 0.26 TFLOP/s
+    8 ops (compiled): 0.181 ms | AI: 2 FLOP/B | 5.93 TFLOP/s
+   16 ops (   eager): 8.324 ms | AI: 0.0833 FLOP/B | 0.26 TFLOP/s
+   16 ops (compiled): 0.181 ms | AI: 4 FLOP/B | 11.85 TFLOP/s
+   32 ops (   eager): 16.733 ms | AI: 0.0833 FLOP/B | 0.26 TFLOP/s
+   32 ops (compiled): 0.181 ms | AI: 8 FLOP/B | 23.70 TFLOP/s
+   64 ops (   eager): 33.579 ms | AI: 0.0833 FLOP/B | 0.26 TFLOP/s
+   64 ops (compiled): 0.181 ms | AI: 16 FLOP/B | 47.35 TFLOP/s
+  128 ops (   eager): 71.972 ms | AI: 0.0833 FLOP/B | 0.24 TFLOP/s
+  128 ops (compiled): 0.285 ms | AI: 32 FLOP/B | 60.21 TFLOP/s
+  matmul 1024×1024: 0.059 ms | AI: 170.7 FLOP/B | 36.67 TFLOP/s
+  matmul 2048×2048: 0.344 ms | AI: 341.3 FLOP/B | 49.87 TFLOP/s
+  matmul 4096×4096: 3.354 ms | AI: 682.7 FLOP/B | 40.98 TFLOP/s
+
+Generating plots...
+
+Roofline plot saved to /home/dm9/gpu_and_inference_hw/hw1/results/roofline.png
+
+Done! Check the results/ directory for plots.
+
